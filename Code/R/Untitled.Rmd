@@ -1,0 +1,255 @@
+---
+title: "Untitled"
+author: "John Tarr"
+date: "October 30, 2015"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+    includes:
+      in_header: ../TEX/header.tex
+  html_document:
+    highlight: kate
+    number_sections: yes
+    theme: united
+    toc: yes
+    toc_depth: 3
+  word_document: default
+---
+
+\markasdraft
+
+```{r comments_chunk, include=FALSE}
+# ------------------------------------------------------------------------------
+# *** Basic Info - This section only needed in R scripts
+# Name: See documentation for package, see YAML for RMD
+# Developer: See documentation for package, see YAML for RMD
+# Date: See documentation for package, see YAML for RMD
+# Purpose: See documentation for package, see Markdown for RMD
+# ------------------------------------------------------------------------------
+# *** Project Folder Structure
+# Code
+#   - R -> Any R or RMD files
+#   - SQL -> SQL scripts to be read by R and executed against DB
+#         -> Cleaner than having the SQL directly in the R file
+#   - TEX -> A header.tex file that is explained further below
+# Data
+#   - Originals -> The original version, should be read only
+#   - HandModified -> If I have to create data by hand or modify an original
+#   - PreProcessed -> If processing the data takes significant time
+#                  -> Also useful if pre-processing is done by an outside program
+# Output
+#   - This folder should be entirely reproducable from the R script
+#   - Only exception is the PDF file. Need to learn how to override KnitPDF button
+#   - All spreadsheet, plot, etc output should go here
+#   - If I have manually collected data, use R to copy from Data to Output
+# Project Documentation
+#   - Supporting documentation
+# ------------------------------------------------------------------------------
+# *** YAML Comments
+# I typically output to PDF with a 3 layer table of contents
+# The HTML and Word would probably need some adjusting if I started using them
+# Note header.tex, which allows me to perform the following functions:
+#     - \newpage -> Creates a page break, as you'd expect
+#     - \blandscape -> Begins landscape mode and rotates the page
+#                   -> Must have matching elandscape for blandscape
+#                   -> Don't forget to alter figwidth/figheight on landscape chunks
+#                   -> Not doing so can result in a leading blank page
+#     - \elandscape -> Ends landscape and goes back to portrait
+#     - \markasdraft -> Prints draft diagonally across the page
+# ------------------------------------------------------------------------------
+# *** Change Log
+# ******
+# YYYY/MM/DD - JNT  - Changed ABC because XYZ
+#                   - This is a second line if needed
+# ******
+# YYYY/MM/DD - JNT  - Changed ABC because XYZ
+#                   - This is a second line if needed
+# ******
+# ------------------------------------------------------------------------------
+# *** To do items
+# JNT - Need to check for condition where XYZ
+# JNT - Turn repeated data frame clean up into function
+#     - When making function, don't forget to...
+# ------------------------------------------------------------------------------
+```
+
+```{r libraries_chunk, include=FALSE}
+# ------------------------------------------------------------------------------
+# *** Packages Chunk
+# This is just a chunk to load all packages used in the project
+# include=FALSE keeps this code, results, errors, etc from displaying
+# ------------------------------------------------------------------------------
+
+# *** Ingestion
+library(RODBC)
+library(readxl)
+library(readr)
+
+# *** Manipulation
+library('data.table')
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(descr)
+library(questionr)
+library(lubridate)
+
+# *** Visualization
+#library(ggvis) # HTML and interactive plots
+library(ggplot2)
+library(scales)
+library(gridExtra)
+library(gclus) # For histograms with correlation color coding
+library(GGally) # Installed for ggpairs, upgraded pairs function
+
+# *** Presentation
+library(knitr)
+
+# *** Personal Packages
+library(mahPackage)
+```
+
+```{r knitr_setup_chunk, include=FALSE}
+# ------------------------------------------------------------------------------
+# *** knitr Setup Chunk
+# This is a way to set options for all code chunks at once
+# After this, we don't need include=FALSE, as we want the output to display
+# Also sets the working directory for knitr
+# ------------------------------------------------------------------------------
+# *** Possible enhancements if needed
+# You can set options to a variable instead of hardcoding
+# A possible use might be a "developer mode" and a "publication mode"
+# One would echo code, and the other would not, for instance
+
+# You can also control options by output type, as with the code below:
+# output <- opts_knit$get("rmarkdown.pandoc.to") # "html", "latex", "docx"
+# if (output=="latex") opts_chunk$set(fig.width=11, fig.height=11)
+# ------------------------------------------------------------------------------
+
+# *** Chunk Options
+knitr::opts_chunk$set(echo=FALSE,     # My customers won't want to see code
+                      warning=FALSE,  # Same for warning messages, I can catch them in the console
+                      message=FALSE,  # Same for messages
+                      include=TRUE,   # Include defaults to true, shows code results
+                      fig.width = 10, # Experimented with this
+                      fig.height = 7, # Same as above
+                      dev="png",      # Not sure why, copied this
+                      dpi=200,        # Was getting poor image quality, increased DPI
+                      dev.args=list(type="cairo")) # cairo used for anti-aliasing
+
+# *** Working Directory
+# RStudio uses the project folder as the working directory
+# knitr uses the location of the .RMD file as the working directory
+# This moves knitr's WD up to RStudio's WD
+knitr::opts_knit$set(root.dir = "../../")
+```
+
+```{r r_setup_chunk}
+# ------------------------------------------------------------------------------
+# *** Setup Chunk
+# Some basic things to set up for the script
+# ------------------------------------------------------------------------------
+
+# Clears the environment
+# Stale variables can mask issues when testing
+rm(list = ls())
+
+# Turns off scientific notation
+# My customers prefer standard decimal
+options(scipen = 999)
+
+# By default, R will try to factor strings it reads in
+# Manipulating the strings is easier, can always factor later
+options(stringsAsFactors = FALSE)
+```
+
+```{r read_spreadsheets_chunk}
+# ------------------------------------------------------------------------------
+# *** Read Spreadsheets Chunk
+# read_excel uses readXL, pretty basic, can exclude col_types
+# ------------------------------------------------------------------------------
+
+# *** myFile.xlsx
+# Source: 
+# Date: 
+# Details: 
+
+myDataFrame <- read_excel("Data/Originals/myFile.xlsx", 
+                      sheet = "Sheet1", 
+                      col_types = c("numeric", "text", "date"))
+```
+
+```{r read_database_chunk}
+# ------------------------------------------------------------------------------
+# *** Read Database Chunk
+# Two connections listed below, one for DEV and one for PRD
+# The base SQL file is read in from the Code/SQL folder and modified
+# ------------------------------------------------------------------------------
+
+# *** SQL Connection
+# DEV
+#SQLServer <- odbcDriverConnect(connection = "Driver={SQL Server};server=<<server>>;database=<<db>>;trusted_connection=yes")
+# PRD
+#SQLServer <- odbcDriverConnect(connection = "Driver={SQL Server};server=<<server>>;database=<<db>>;trusted_connection=yes")
+
+# *** SQL Query - <<name>>
+#sqlTextFile <- read_file("Code/SQL/<<file>>.sql")
+#sqlStatement <- sqlTextFile
+#sqlStatement <- gsub("@start_date", '2027-01-01', sqlStatement)
+#sqlStatement <- gsub("@end_date", '2027-01-01', sqlStatement)
+#sqlResult <- sqlQuery(SQLServer, sqlStatement)
+```
+
+\newpage
+
+# Abstract
+
+Executive summary of all other sections.
+
+# Introduction
+
+## Purpose
+
+Why you're doing the analysis.
+
+## Background Info
+
+Information about the processes you're investigating.
+
+# Methods
+
+## Data Acquisition
+
+Where you got the data, report names, person, system, etc.
+
+## Sanity Checks
+
+What did you do to ensure the data is valid?
+
+## Data Cleanup
+
+What did you remove/alter to clean the data for analysis?
+
+## Data Analysis
+
+The actual analysis.
+
+# Results
+
+Summary of what you found.
+
+# Conclusions
+
+The conclusions you feel you can draw from your results.
+
+```{r copy_raw_files_chunk}
+# ------------------------------------------------------------------------------
+# *** Copy Raw Files Chunk
+# Very basic code to copy any files directly to output.
+# If you generated data outside of R, or wanted to copy the original files.
+# ------------------------------------------------------------------------------
+
+#file.copy('Data/Originals/myFile.xlsx', 'Output/myFile.xlsx', overwrite = TRUE, recursive = FALSE,
+#          copy.mode = TRUE, copy.date = TRUE)
+```

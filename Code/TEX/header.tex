@@ -1,0 +1,23 @@
+\usepackage{lscape}
+\usepackage{eso-pic,graphicx,transparent}
+
+\newcommand{\blandscape}{
+	\begin{landscape}
+	\pagebreak[0]\global\pdfpageattr\expandafter{\the\pdfpageattr/Rotate 90}
+}
+
+\newcommand{\elandscape}{
+	\end{landscape}
+	\pagebreak[0]\global\pdfpageattr\expandafter{\the\pdfpageattr/Rotate 0}
+}
+
+\newcommand{\markasdraft}{ 
+	\AddToShipoutPictureFG{
+		\AtPageCenter{% or \AtTextCenter
+			\makebox[0pt]{\rotatebox[origin=c]{45}{%
+				\scalebox{15}{\texttransparent{0.05}{DRAFT}}%
+			}		
+			}
+		}
+	}
+}
